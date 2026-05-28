@@ -15,8 +15,12 @@ const validate = (userData) => {
     if(!validator.isEmail(userData.emailId))
         throw new Error("Invalid email format");
 
-    if(!validator.isStrongPassword(userData.password))
-        throw new Error("Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one symbol.");
+    // if(!validator.isStrongPassword(userData.password))
+    //     throw new Error("Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one symbol.");
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if(!passwordRegex.test(userData.password)) {
+    throw new Error("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)");
+  }
 
 };
 module.exports = validate;
