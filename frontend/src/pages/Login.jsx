@@ -6,7 +6,6 @@ import { useNavigate, NavLink } from 'react-router';
 import { loginUser } from "../authSlice";
 import { useEffect, useState } from 'react';
 
-
 const loginSchema = z.object({
   emailId: z.string().email("Invalid Email"),
   password: z.string().min(8, "Password is too weak") 
@@ -21,7 +20,7 @@ function Login() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(loginSchema) }); // Using renamed schema
+  } = useForm({ resolver: zodResolver(loginSchema) });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -34,15 +33,31 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-base-200"> {/* Added bg for contrast */}
+    <div className="min-h-screen flex items-center justify-center p-4 bg-base-200">
       <div className="card w-96 bg-base-100 shadow-xl">
         <div className="card-body">
-          <h2 className="card-title justify-center text-3xl mb-6">ThinkINCode</h2> {/* Added mb-6 */}
+          <h2 className="card-title justify-center text-3xl mb-6">ThinkINCode</h2>
 
-          
+          {/* Show error message if login fails */}
+          {error && (
+  <div className="alert alert-error shadow-lg mb-4">
+    <div>
+      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>
+        {/* Show friendly message for 401 errors */}
+        {error.includes('401') || error.includes('status code')
+          ? 'Invalid email or password. Please try again.'
+          : error}
+      </span>
+    </div>
+  </div>
+)}
+
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="form-control"> {/* Removed mt-4 from first form-control for tighter spacing to title or global error */}
-              <label className="label"> {/* Removed mb-1, default spacing should be fine */}
+            <div className="form-control">
+              <label className="label">
                 <span className="label-text">Email</span>
               </label>
               <input
@@ -63,7 +78,7 @@ function Login() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   className={`input input-bordered w-full pr-10 ${errors.password ? 'input-error' : ''}`}
                   {...register('password')}
                 />
@@ -93,7 +108,7 @@ function Login() {
             <div className="form-control mt-8 flex justify-center">
               <button
                 type="submit"
-                className={`btn btn-primary ${loading ? 'loading btn-disabled' : ''}`} // Added btn-disabled for better UX with loading
+                className={`btn btn-primary ${loading ? 'loading btn-disabled' : ''}`}
                 disabled={loading}
               >
                 {loading ? (
@@ -107,7 +122,7 @@ function Login() {
           </form>
           <div className="text-center mt-6">
             <span className="text-sm">
-              Don't have an account?{' '} {/* Adjusted text slightly */}
+              Don't have an account?{' '}
               <NavLink to="/signup" className="link link-primary">
                 Sign Up
               </NavLink>

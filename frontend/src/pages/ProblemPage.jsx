@@ -8,11 +8,10 @@ import ChatAi from '../components/ChatAi';
 import Editorial from '../components/Editorial';
 
 const langMap = {
-        cpp: 'C++',
-        java: 'Java',
-        javascript: 'JavaScript'
+  cpp: 'C++',
+  java: 'Java',
+  javascript: 'JavaScript'
 };
-
 
 const ProblemPage = () => {
   const [problem, setProblem] = useState(null);
@@ -24,37 +23,27 @@ const ProblemPage = () => {
   const [activeLeftTab, setActiveLeftTab] = useState('description');
   const [activeRightTab, setActiveRightTab] = useState('code');
   const editorRef = useRef(null);
-  let {problemId}  = useParams();
-
-  
+  let { problemId } = useParams();
 
   const { handleSubmit } = useForm();
 
- useEffect(() => {
+  useEffect(() => {
     const fetchProblem = async () => {
       setLoading(true);
       try {
-        
         const response = await axiosClient.get(`/problem/problemById/${problemId}`);
-       
-        
         const initialCode = response.data.startCode.find(sc => sc.language === langMap[selectedLanguage]).initialCode;
-
         setProblem(response.data);
-        
         setCode(initialCode);
         setLoading(false);
-        
       } catch (error) {
         console.error('Error fetching problem:', error);
         setLoading(false);
       }
     };
-
     fetchProblem();
   }, [problemId]);
 
-  // Update code when language changes
   useEffect(() => {
     if (problem) {
       const initialCode = problem.startCode.find(sc => sc.language === langMap[selectedLanguage]).initialCode;
@@ -77,23 +66,21 @@ const ProblemPage = () => {
   const handleRun = async () => {
     setLoading(true);
     setRunResult(null);
-    
     try {
       const response = await axiosClient.post(`/submission/run/${problemId}`, {
         code,
         language: selectedLanguage
       });
-
       setRunResult(response.data);
       setLoading(false);
       setActiveRightTab('testcase');
-      
     } catch (error) {
       console.error('Error running code:', error);
-      setRunResult({
-        success: false,
-        error: 'Internal server error'
-      });
+      if (error.response && error.response.data) {
+        setRunResult(error.response.data); // { error, details }
+      } else {
+        setRunResult({ error: 'Internal server error', details: error.message });
+      }
       setLoading(false);
       setActiveRightTab('testcase');
     }
@@ -102,20 +89,22 @@ const ProblemPage = () => {
   const handleSubmitCode = async () => {
     setLoading(true);
     setSubmitResult(null);
-    
     try {
-        const response = await axiosClient.post(`/submission/submit/${problemId}`, {
-        code:code,
+      const response = await axiosClient.post(`/submission/submit/${problemId}`, {
+        code: code,
         language: selectedLanguage
       });
-
-       setSubmitResult(response.data);
-       setLoading(false);
-       setActiveRightTab('result');
-      
+      setSubmitResult(response.data);
+      setLoading(false);
+      setActiveRightTab('result');
     } catch (error) {
       console.error('Error submitting code:', error);
-      setSubmitResult(null);
+      // ✅ Capture backend error response
+      if (error.response && error.response.data) {
+        setSubmitResult(error.response.data);
+      } else {
+        setSubmitResult({ accepted: false, error: 'Submission failed', details: error.message });
+      }
       setLoading(false);
       setActiveRightTab('result');
     }
@@ -149,46 +138,15 @@ const ProblemPage = () => {
 
   return (
     <div className="h-screen flex bg-base-100">
-      {/* Left Panel */}
+      {/* Left Panel - unchanged, keep as is */}
       <div className="w-1/2 flex flex-col border-r border-base-300">
-        {/* Left Tabs */}
         <div className="tabs tabs-bordered bg-base-200 px-4">
-          <button 
-            className={`tab ${activeLeftTab === 'description' ? 'tab-active' : ''}`}
-            onClick={() => setActiveLeftTab('description')}
-          >
-            Description
-          </button>
-          <button 
-            className={`tab ${activeLeftTab === 'editorial' ? 'tab-active' : ''}`}
-            onClick={() => setActiveLeftTab('editorial')}
-          >
-            Editorial
-          </button>
-          <button 
-            className={`tab ${activeLeftTab === 'solutions' ? 'tab-active' : ''}`}
-            onClick={() => setActiveLeftTab('solutions')}
-          >
-            Solutions
-          </button>
-          <button 
-            className={`tab ${activeLeftTab === 'submissions' ? 'tab-active' : ''}`}
-            onClick={() => setActiveLeftTab('submissions')}
-          >
-            Submissions
-          </button>
-
-          <button 
-            className={`tab ${activeLeftTab === 'chatAI' ? 'tab-active' : ''}`}
-            onClick={() => setActiveLeftTab('chatAI')}
-          >
-            ChatAI
-          </button>
-
-
+          <button className={`tab ${activeLeftTab === 'description' ? 'tab-active' : ''}`} onClick={() => setActiveLeftTab('description')}>Description</button>
+          <button className={`tab ${activeLeftTab === 'editorial' ? 'tab-active' : ''}`} onClick={() => setActiveLeftTab('editorial')}>Editorial</button>
+          <button className={`tab ${activeLeftTab === 'solutions' ? 'tab-active' : ''}`} onClick={() => setActiveLeftTab('solutions')}>Solutions</button>
+          <button className={`tab ${activeLeftTab === 'submissions' ? 'tab-active' : ''}`} onClick={() => setActiveLeftTab('submissions')}>Submissions</button>
+          <button className={`tab ${activeLeftTab === 'chatAI' ? 'tab-active' : ''}`} onClick={() => setActiveLeftTab('chatAI')}>ChatAI</button>
         </div>
-
-        {/* Left Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {problem && (
             <>
@@ -201,13 +159,9 @@ const ProblemPage = () => {
                     </div>
                     <div className="badge badge-primary">{problem.tags}</div>
                   </div>
-
                   <div className="prose max-w-none">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {problem.description}
-                    </div>
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{problem.description}</div>
                   </div>
-
                   <div className="mt-8">
                     <h3 className="text-lg font-semibold mb-4">Examples:</h3>
                     <div className="space-y-4">
@@ -225,31 +179,16 @@ const ProblemPage = () => {
                   </div>
                 </div>
               )}
-
-              {/* {activeLeftTab === 'editorial' && (
+              {activeLeftTab === 'editorial' && (
                 <div className="prose max-w-none">
                   <h2 className="text-xl font-bold mb-4">Editorial</h2>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration}/>
-                  </div>
+                  {problem.secureUrl ? (
+                    <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration} />
+                  ) : (
+                    <p className="text-gray-500">No video solution available for this problem.</p>
+                  )}
                 </div>
-              )} */}
-
-              {activeLeftTab === 'editorial' && (
-  <div className="prose max-w-none">
-    <h2 className="text-xl font-bold mb-4">Editorial</h2>
-    {problem.secureUrl ? (
-      <Editorial
-        secureUrl={problem.secureUrl}
-        thumbnailUrl={problem.thumbnailUrl}
-        duration={problem.duration}
-      />
-    ) : (
-      <p className="text-gray-500">No video solution available for this problem.</p>
-    )}
-  </div>
-)}
-
+              )}
               {activeLeftTab === 'solutions' && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Solutions</h2>
@@ -269,7 +208,6 @@ const ProblemPage = () => {
                   </div>
                 </div>
               )}
-
               {activeLeftTab === 'submissions' && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">My Submissions</h2>
@@ -278,12 +216,11 @@ const ProblemPage = () => {
                   </div>
                 </div>
               )}
-
               {activeLeftTab === 'chatAI' && (
                 <div className="prose max-w-none">
                   <h2 className="text-xl font-bold mb-4">CHAT with AI</h2>
                   <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    <ChatAi problem={problem}></ChatAi>
+                    <ChatAi problem={problem} />
                   </div>
                 </div>
               )}
@@ -294,33 +231,15 @@ const ProblemPage = () => {
 
       {/* Right Panel */}
       <div className="w-1/2 flex flex-col">
-        {/* Right Tabs */}
         <div className="tabs tabs-bordered bg-base-200 px-4">
-          <button 
-            className={`tab ${activeRightTab === 'code' ? 'tab-active' : ''}`}
-            onClick={() => setActiveRightTab('code')}
-          >
-            Code
-          </button>
-          <button 
-            className={`tab ${activeRightTab === 'testcase' ? 'tab-active' : ''}`}
-            onClick={() => setActiveRightTab('testcase')}
-          >
-            Testcase
-          </button>
-          <button 
-            className={`tab ${activeRightTab === 'result' ? 'tab-active' : ''}`}
-            onClick={() => setActiveRightTab('result')}
-          >
-            Result
-          </button>
+          <button className={`tab ${activeRightTab === 'code' ? 'tab-active' : ''}`} onClick={() => setActiveRightTab('code')}>Code</button>
+          <button className={`tab ${activeRightTab === 'testcase' ? 'tab-active' : ''}`} onClick={() => setActiveRightTab('testcase')}>Testcase</button>
+          <button className={`tab ${activeRightTab === 'result' ? 'tab-active' : ''}`} onClick={() => setActiveRightTab('result')}>Result</button>
         </div>
 
-        {/* Right Content */}
         <div className="flex-1 flex flex-col">
           {activeRightTab === 'code' && (
             <div className="flex-1 flex flex-col">
-              {/* Language Selector */}
               <div className="flex justify-between items-center p-4 border-b border-base-300">
                 <div className="flex gap-2">
                   {['javascript', 'java', 'cpp'].map((lang) => (
@@ -334,8 +253,6 @@ const ProblemPage = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Monaco Editor */}
               <div className="flex-1">
                 <Editor
                   height="100%"
@@ -366,32 +283,13 @@ const ProblemPage = () => {
                   }}
                 />
               </div>
-
-              {/* Action Buttons */}
               <div className="p-4 border-t border-base-300 flex justify-between">
                 <div className="flex gap-2">
-                  <button 
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setActiveRightTab('testcase')}
-                  >
-                    Console
-                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setActiveRightTab('testcase')}>Console</button>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    className={`btn btn-outline btn-sm ${loading ? 'loading' : ''}`}
-                    onClick={handleRun}
-                    disabled={loading}
-                  >
-                    Run
-                  </button>
-                  <button
-                    className={`btn btn-primary btn-sm ${loading ? 'loading' : ''}`}
-                    onClick={handleSubmitCode}
-                    disabled={loading}
-                  >
-                    Submit
-                  </button>
+                  <button className={`btn btn-outline btn-sm ${loading ? 'loading' : ''}`} onClick={handleRun} disabled={loading}>Run</button>
+                  <button className={`btn btn-primary btn-sm ${loading ? 'loading' : ''}`} onClick={handleSubmitCode} disabled={loading}>Submit</button>
                 </div>
               </div>
             </div>
@@ -401,50 +299,42 @@ const ProblemPage = () => {
             <div className="flex-1 p-4 overflow-y-auto">
               <h3 className="font-semibold mb-4">Test Results</h3>
               {runResult ? (
-                <div className={`alert ${runResult.success ? 'alert-success' : 'alert-error'} mb-4`}>
-                  <div>
-                    {runResult.success ? (
-                      <div>
-                        <h4 className="font-bold">âœ… All test cases passed!</h4>
-                        <p className="text-sm mt-2">Runtime: {runResult.runtime+" sec"}</p>
-                        <p className="text-sm">Memory: {runResult.memory+" KB"}</p>
-                        
-                        <div className="mt-4 space-y-2">
-                          {runResult.testCases.map((tc, i) => (
-                            <div key={i} className="bg-base-100 p-3 rounded text-xs">
-                              <div className="font-mono">
-                                <div><strong>Input:</strong> {tc.stdin}</div>
-                                <div><strong>Expected:</strong> {tc.expected_output}</div>
-                                <div><strong>Output:</strong> {tc.stdout}</div>
-                                <div className={'text-green-600'}>
-                                  {'âœ“ Passed'}
-                                </div>
+                Array.isArray(runResult) ? (
+                  <div className="alert alert-success mb-4">
+                    <div>
+                      <h4 className="font-bold">✅ Test cases executed</h4>
+                      <div className="mt-4 space-y-2">
+                        {runResult.map((tc, i) => (
+                          <div key={i} className="bg-base-100 p-3 rounded text-xs">
+                            <div className="font-mono">
+                              <div><strong>Input:</strong> {tc.stdin}</div>
+                              <div><strong>Expected:</strong> {tc.expected_output}</div>
+                              <div><strong>Output:</strong> {tc.stdout}</div>
+                              <div className={tc.status_id === 3 ? 'text-green-600' : 'text-red-600'}>
+                                {tc.status_id === 3 ? '✓ Passed' : '✗ Failed'}
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <div>
-                        <h4 className="font-bold">âŒ Error</h4>
-                        <div className="mt-4 space-y-2">
-                          {runResult.testCases.map((tc, i) => (
-                            <div key={i} className="bg-base-100 p-3 rounded text-xs">
-                              <div className="font-mono">
-                                <div><strong>Input:</strong> {tc.stdin}</div>
-                                <div><strong>Expected:</strong> {tc.expected_output}</div>
-                                <div><strong>Output:</strong> {tc.stdout}</div>
-                                <div className={tc.status_id==3 ? 'text-green-600' : 'text-red-600'}>
-                                  {tc.status_id==3 ? 'âœ“ Passed' : 'âœ— Failed'}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
-                </div>
+                ) : runResult.error ? (
+                  <div className="alert alert-error mb-4">
+                    <div>
+                      <h4 className="font-bold">❌ {runResult.error}</h4>
+                      {runResult.details && (
+                        <pre className="text-xs mt-2 overflow-x-auto whitespace-pre-wrap">
+                          {runResult.details}
+                        </pre>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="alert alert-warning mb-4">
+                    <div>Unexpected response format</div>
+                  </div>
+                )
               ) : (
                 <div className="text-gray-500">
                   Click "Run" to test your code with the example test cases.
@@ -461,18 +351,23 @@ const ProblemPage = () => {
                   <div>
                     {submitResult.accepted ? (
                       <div>
-                        <h4 className="font-bold text-lg">ðŸŽ‰ Accepted</h4>
+                        <h4 className="font-bold text-lg">🎉 Accepted</h4>
                         <div className="mt-4 space-y-2">
                           <p>Test Cases Passed: {submitResult.passedTestCases}/{submitResult.totalTestCases}</p>
-                          <p>Runtime: {submitResult.runtime + " sec"}</p>
-                          <p>Memory: {submitResult.memory + "KB"} </p>
+                          <p>Runtime: {submitResult.runtime} sec</p>
+                          <p>Memory: {submitResult.memory} KB</p>
                         </div>
                       </div>
                     ) : (
                       <div>
-                        <h4 className="font-bold text-lg">âŒ {submitResult.error}</h4>
+                        <h4 className="font-bold text-lg">❌ {submitResult.error || 'Submission failed'}</h4>
                         <div className="mt-4 space-y-2">
-                          <p>Test Cases Passed: {submitResult.passedTestCases}/{submitResult.totalTestCases}</p>
+                          <p>Test Cases Passed: {submitResult.passedTestCases || 0}/{submitResult.totalTestCases || '?'}</p>
+                          {submitResult.details && (
+                            <pre className="text-xs mt-2 overflow-x-auto whitespace-pre-wrap">
+                              {submitResult.details}
+                            </pre>
+                          )}
                         </div>
                       </div>
                     )}
