@@ -1,15 +1,5 @@
 const axios = require('axios');
 
-// const getLanguageById = (lang) => {
-//   const language = {
-//     "c++": 54,
-//      "cpp": 54,
-//     "java": 62,
-//     "javascript": 63,
-//   };
-//   return language[lang.toLowerCase()];
-// };
-
 const getLanguageById = (lang) => {
   const languageMap = {
     "c++": 54,      // GCC 9.2.0 (common)
@@ -31,7 +21,7 @@ const submitBatch = async (submissions) => {
       'x-rapidapi-key': process.env.JUDGE0_KEY,
       'x-rapidapi-host': 'judge0-ce.p.rapidapi.com',
       'Content-Type': 'application/json',
-       timeout: 30000   // ⬅️ 30 seconds for the initial POST
+       timeout: 30000   // 30 seconds for the initial POST
     },
     data: { submissions }
   };
@@ -42,7 +32,7 @@ const submitBatch = async (submissions) => {
     return response.data; // already an array
   } catch (error) {
     console.error('Submit Batch Error:', error.response?.data || error.message);
-    throw error; // rethrow so createProblem can catch it
+    throw error; // rethrow so calling controller can catch it
   }
 };
 
@@ -64,30 +54,7 @@ const submitToken = async (resultToken) => {
     }
   };
 
-  // const maxAttempts = 30; // 30 seconds timeout
-  // let attempts = 0;
-
-
-//   while (attempts < maxAttempts) {
-//     try {
-//       const response = await axios.request(options);
-//       // response.data.submissions is an array of results
-//       const submissions = response.data.submissions;
-//       const allDone = submissions.every(r => r.status_id > 2);
-//       if (allDone) {
-//         return submissions;
-//       }
-//       attempts++;
-//       await wait(1000);
-//     } catch (error) {
-//       console.error('Token Fetch Error:', error.response?.data || error.message);
-//       throw error;
-//     }
-//   }
-//   throw new Error('Judge0 timeout after 30 seconds');
-// };
-
- const maxAttempts = 60;       // ⬅️ increase to 60 seconds
+  const maxAttempts = 60;       // increase to 60 seconds
   const pollInterval = 1000;    // 1 second
   let attempts = 0;
 
@@ -113,6 +80,42 @@ const submitToken = async (resultToken) => {
   throw new Error(`Judge0 timeout after ${maxAttempts} seconds`);
 };
 
+// NEW: Single Submission Fallback logic
+const submitSingleFallback = async (submissions) => {
+  console.log("⚠️ Judge0 Batch limit reached! Switching cleanly to Single Submissions fallback...");
+  const results = [];
 
+  for (const sub of submissions) {
+    const options = {
+      method: 'POST',
+      url: 'https://judge0-ce.p.rapidapi.com/submissions',
+      params: { 
+        base64_encoded: 'false', 
+        wait: 'true', // Get complete result object back immediately
+        fields: '*' 
+      },
+      headers: {
+        'x-rapidapi-key': process.env.JUDGE0_KEY,
+        'x-rapidapi-host': 'judge0-ce.p.rapidapi.com',
+        'Content-Type': 'application/json'
+      },
+      data: sub
+    };
 
-module.exports = { getLanguageById, submitBatch, submitToken };
+    try {
+      const response = await axios.request(options);
+      results.push(response.data); 
+    } catch (error) {
+      console.error('Single Fallback Step Error:', error.message);
+      results.push({
+        status_id: 13,
+        status: { id: 13, description: 'Internal Error' },
+        compile_output: error.message,
+        stderr: error.message
+      });
+    }
+  }
+  return results;
+};
+
+module.exports = { getLanguageById, submitBatch, submitToken, submitSingleFallback };

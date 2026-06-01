@@ -1,6 +1,6 @@
 const Problem = require("../models/problem");
 const Submission = require("../models/submission");
-const {getLanguageById,submitBatch,submitToken} = require("../utils/problemUtility");
+const {getLanguageById, submitBatch, submitToken, submitSingleFallback} = require("../utils/problemUtility");
 const User = require('../models/user');
 
 const submitCode = async (req,res)=>{
@@ -46,16 +46,24 @@ const submitCode = async (req,res)=>{
         expected_output: testcase.output
     }));
 
+    let testResult;
+    try {
+        const submitResult = await submitBatch(submissions);
 
-    const submitResult = await submitBatch(submissions);
-
-    if (!submitResult) {
-        return res.status(500).send("Failed to submit code to Judge0 - check API key");
+        if (!submitResult) {
+            return res.status(500).send("Failed to submit code to Judge0 - check API key");
+        }
+        
+        const resultToken = submitResult.map((value)=> value.token);
+        testResult = await submitToken(resultToken);
+    } catch (error) {
+        // Fallback Strategy: If batch limits are exceeded (Error 429), execute single requests
+        if (error.response && error.response.status === 429) {
+            testResult = await submitSingleFallback(submissions);
+        } else {
+            throw error; // Propagate non-rate-limiting errors to the outer catch
+        }
     }
-    
-    const resultToken = submitResult.map((value)=> value.token);
-
-    const testResult = await submitToken(resultToken);
     
 
     // submittedResult ko update karo
@@ -146,9 +154,19 @@ const runCode = async(req,res) => {
       expected_output: testcase.output
     }));
 
-    const submitResult = await submitBatch(submissions);
-    const resultToken = submitResult.map((value) => value.token);
-    const testResult = await submitToken(resultToken);
+    let testResult;
+    try {
+        const submitResult = await submitBatch(submissions);
+        const resultToken = submitResult.map((value) => value.token);
+        testResult = await submitToken(resultToken);
+    } catch (error) {
+        // Fallback Strategy: If batch limits are exceeded (Error 429), execute single requests
+        if (error.response && error.response.status === 429) {
+            testResult = await submitSingleFallback(submissions);
+        } else {
+            throw error;
+        }
+    }
 
     res.status(201).send(testResult);
   }
@@ -161,8 +179,5 @@ catch(err) {
   });
 }
 };
-
-
-
 
 module.exports = {submitCode, runCode};

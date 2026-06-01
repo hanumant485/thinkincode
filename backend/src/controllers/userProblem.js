@@ -1,10 +1,8 @@
-const {getLanguageById,submitBatch,submitToken} = require("../utils/problemUtility");
+const {getLanguageById,submitBatch,submitToken,submitSingleFallback} = require("../utils/problemUtility");
 const Problem = require("../models/problem");
 const User = require("../models/user");
 const Submission = require("../models/submission");
 const SolutionVideo = require("../models/solutionVideo")
-
-
 
 const createProblem = async (req, res) => {
   const {
@@ -32,9 +30,19 @@ const createProblem = async (req, res) => {
         expected_output: testcase.output,
       }));
 
-      const submitResult = await submitBatch(submissions);
-      const resultToken = submitResult.map((value) => value.token);
-      const testResult = await submitToken(resultToken);
+      let testResult;
+      try {
+        const submitResult = await submitBatch(submissions);
+        const resultToken = submitResult.map((value) => value.token);
+        testResult = await submitToken(resultToken);
+      } catch (error) {
+        // Fallback: If batch limits are exceeded (status 429), switch to single submissions
+        if (error.response && error.response.status === 429) {
+          testResult = await submitSingleFallback(submissions);
+        } else {
+          throw error;
+        }
+      }
 
       console.log(testResult);
 
@@ -89,12 +97,6 @@ const updateProblem = async (req,res)=>{
     }
       
     for(const {language,completeCode} of referenceSolution){
-         
-
-      // source_code:
-      // language_id:
-      // stdin: 
-      // expectedOutput:
 
       const languageId = getLanguageById(language);
         
@@ -106,17 +108,19 @@ const updateProblem = async (req,res)=>{
           expected_output: testcase.output
       }));
 
-
-      const submitResult = await submitBatch(submissions);
-      // console.log(submitResult);
-
-      const resultToken = submitResult.map((value)=> value.token);
-
-      // ["db54881d-bcf5-4c7b-a2e3-d33fe7e25de7","ecc52a9b-ea80-4a00-ad50-4ab6cc3bb2a1","1b35ec3b-5776-48ef-b646-d5522bdeb2cc"]
-      
-     const testResult = await submitToken(resultToken);
-
-    //  console.log(testResult);
+      let testResult;
+      try {
+        const submitResult = await submitBatch(submissions);
+        const resultToken = submitResult.map((value)=> value.token);
+        testResult = await submitToken(resultToken);
+      } catch (error) {
+        // Fallback: If batch limits are exceeded (status 429), switch to single submissions
+        if (error.response && error.response.status === 429) {
+          testResult = await submitSingleFallback(submissions);
+        } else {
+          throw error;
+        }
+      }
 
      for(const test of testResult){
       if(test.status_id!=3){
@@ -125,7 +129,6 @@ const updateProblem = async (req,res)=>{
      }
 
     }
-
 
   const newProblem = await Problem.findByIdAndUpdate(id , {...req.body}, {runValidators:true, new:true});
    
@@ -158,7 +161,6 @@ const deleteProblem = async(req,res)=>{
   }
 };
 
-
 const getProblemById = async(req,res)=>{
 
   const {id} = req.params;
@@ -168,15 +170,11 @@ const getProblemById = async(req,res)=>{
       return res.status(400).send("ID is Missing");
 
     const getProblem = await Problem.findById(id).select('_id title description difficulty tags visibleTestCases startCode referenceSolution ');
-   
-    // video ka jo bhi url wagera le aao
 
    if(!getProblem)
     return res.status(404).send("Problem is Missing");
 
-  //  const videos = await SolutionVideo.findOne({problemId:id});
    const videos = await SolutionVideo.findOne({ problemId: getProblem._id });
-// getProblem
 
    if(videos){   
     
@@ -198,8 +196,6 @@ const getProblemById = async(req,res)=>{
   }
 }
 
-
-
 const getAllProblem = async(req,res)=>{
 
   try{
@@ -216,7 +212,6 @@ const getAllProblem = async(req,res)=>{
     res.status(500).send("Error: "+err);
   }
 };
-
 
 const solvedAllProblembyUser =  async(req,res)=>{
    
@@ -258,6 +253,4 @@ const submittedProblem = async(req,res)=>{
   }
 };
 
-
-
-module.exports = {createProblem,updateProblem,deleteProblem,getProblemById,getAllProblem,solvedAllProblembyUser,submittedProblem,};
+module.exports = {createProblem,updateProblem,deleteProblem,getProblemById,getAllProblem,solvedAllProblembyUser,submittedProblem};
