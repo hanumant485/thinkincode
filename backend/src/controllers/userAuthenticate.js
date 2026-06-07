@@ -7,49 +7,26 @@ const Submission = require("../models/submission");
 
 
 
-const register = async (req, res)=>{
-    try{
-       // validate the user data
-       validate(req.body);
-
-        const {firstName, emailId, password} = req.body;
-        req.body.password = await bcrypt.hash(password, 10);
-         req.body.role = 'user';
-
-       
-
-        const user = await User.create(req.body);
-
-        const token =  jwt.sign({id:user._id , emailId:emailId, role:'USER'},process.env.JWT_SECRET,{expiresIn: 60*60});
-        
-        const reply = {
+const register = async (req, res) => {
+  try {
+    validate(req.body);
+    const { firstName, emailId, password } = req.body;
+    req.body.password = await bcrypt.hash(password, 10);
+    req.body.role = 'user';
+    const user = await User.create(req.body);
+    res.status(201).json({
+      user: {
         firstName: user.firstName,
         emailId: user.emailId,
         _id: user._id,
         role: user.role,
-      }
-       
-
-      res.cookie('token', token, {
-      maxAge: 60 * 60 * 1000,
-      httpOnly: false,
-      secure: false,
-      sameSite: 'Lax',
-      path: '/'   // <-- add this
+      },
+      message: "Registration successful. Please login."
     });
-         res.status(201).json({
-        user: reply,
-        message: "Registration successful" 
-      });
-    }
-    catch(err){
-        console.error("Registration Error:", err.message);
-        res.status(400).json({
-            message: err.message || "Registration failed",
-            error: err.message
-        });
-    }
-}
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
 
 const login = async (req, res)=>{
     try{
