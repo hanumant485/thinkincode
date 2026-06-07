@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, NavLink } from 'react-router';
-import { registerUser } from '../authSlice';
+import axiosClient from '../utils/axiosClient';
 
 // Strong password: at least 8 chars, one uppercase, one lowercase, one number, one special character
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -19,9 +18,9 @@ const signupSchema = z.object({
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
-  const dispatch = useDispatch();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
 
   const {
     register,
@@ -29,33 +28,40 @@ function Signup() {
     formState: { errors },
   } = useForm({ resolver: zodResolver(signupSchema) });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // ✅ Use the correct backend endpoint: /user/register
+      await axiosClient.post('/user/register', data);
+      // Redirect to login page with success message
+      navigate('/login', { state: { message: 'Account created! Please login.' } });
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  }, [isAuthenticated, navigate]);
-
-  const onSubmit = (data) => {
-    dispatch(registerUser(data));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-base-200"> {/* Added a light bg for contrast */}
+    <div className="min-h-screen flex items-center justify-center p-4 bg-base-200">
       <div className="card w-96 bg-base-100 shadow-xl">
         <div className="card-body">
-          <h2 className="card-title justify-center text-3xl mb-6">ThinkINCode</h2> {/* Added mb-6 for spacing */}
+          <h2 className="card-title justify-center text-3xl mb-6">ThinkINCode</h2>
+
           {error && (
-  <div className="alert alert-error shadow-lg mb-4">
-    <div>
-      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span>{error}</span>
-    </div>
-  </div>
-)}
+            <div className="alert alert-error shadow-lg mb-4">
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit(onSubmit)}>
-            {/* First Name Field */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text">First Name</span>
@@ -63,7 +69,7 @@ function Signup() {
               <input
                 type="text"
                 placeholder="John"
-                className={`input input-bordered w-full ${errors.firstName ? 'input-error' : ''}`} 
+                className={`input input-bordered w-full ${errors.firstName ? 'input-error' : ''}`}
                 {...register('firstName')}
               />
               {errors.firstName && (
@@ -71,7 +77,6 @@ function Signup() {
               )}
             </div>
 
-            {/* Email Field */}
             <div className="form-control mt-4">
               <label className="label">
                 <span className="label-text">Email</span>
@@ -79,7 +84,7 @@ function Signup() {
               <input
                 type="email"
                 placeholder="john@example.com"
-                className={`input input-bordered w-full ${errors.emailId ? 'input-error' : ''}`} // Ensure w-full for consistency
+                className={`input input-bordered w-full ${errors.emailId ? 'input-error' : ''}`}
                 {...register('emailId')}
               />
               {errors.emailId && (
@@ -87,7 +92,6 @@ function Signup() {
               )}
             </div>
 
-            {/* Password Field with Toggle */}
             <div className="form-control mt-4">
               <label className="label">
                 <span className="label-text">Password</span>
@@ -95,16 +99,15 @@ function Signup() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
-                  // Added pr-10 (padding-right) to make space for the button
+                  placeholder="••••••••"
                   className={`input input-bordered w-full pr-10 ${errors.password ? 'input-error' : ''}`}
                   {...register('password')}
                 />
                 <button
                   type="button"
-                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" // Added transform for better centering, styling
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"} // Accessibility
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -123,8 +126,7 @@ function Signup() {
               )}
             </div>
 
-            {/* Submit Button */}
-            <div className="form-control mt-8 flex justify-center"> 
+            <div className="form-control mt-8 flex justify-center">
               <button
                 type="submit"
                 className={`btn btn-primary ${loading ? 'loading' : ''}`}
@@ -135,8 +137,7 @@ function Signup() {
             </div>
           </form>
 
-          {/* Login Redirect */}
-          <div className="text-center mt-6"> {/* Increased mt for spacing */}
+          <div className="text-center mt-6">
             <span className="text-sm">
               Already have an account?{' '}
               <NavLink to="/login" className="link link-primary">

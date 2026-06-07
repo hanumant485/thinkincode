@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, NavLink } from 'react-router'; 
+import { useNavigate, NavLink, useLocation } from 'react-router'; 
 import { loginUser } from "../authSlice";
 import { useEffect, useState } from 'react';
 
@@ -15,7 +15,12 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+  
+  // Get success message from navigation state (e.g., after signup)
+  const successMessage = location.state?.message;
+
   const {
     register,
     handleSubmit,
@@ -38,22 +43,33 @@ function Login() {
         <div className="card-body">
           <h2 className="card-title justify-center text-3xl mb-6">ThinkINCode</h2>
 
+          {/* Success message after signup */}
+          {successMessage && (
+            <div className="alert alert-success shadow-lg mb-4">
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{successMessage}</span>
+              </div>
+            </div>
+          )}
+
           {/* Show error message if login fails */}
           {error && (
-  <div className="alert alert-error shadow-lg mb-4">
-    <div>
-      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span>
-        {/* Show friendly message for 401 errors */}
-        {error.includes('401') || error.includes('status code')
-          ? 'Invalid email or password. Please try again.'
-          : error}
-      </span>
-    </div>
-  </div>
-)}
+            <div className="alert alert-error shadow-lg mb-4">
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  {error.includes('401') || error.includes('status code')
+                    ? 'Invalid email or password. Please try again.'
+                    : error}
+                </span>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="form-control">

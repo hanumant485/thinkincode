@@ -47,16 +47,16 @@ function AdminPanel() {
   } = useForm({
     resolver: zodResolver(problemSchema),
     defaultValues: {
-      startCode: [
-        { language: 'C++', initialCode: '' },
-        { language: 'Java', initialCode: '' },
-        { language: 'JavaScript', initialCode: '' }
-      ],
-      referenceSolution: [
-        { language: 'C++', completeCode: '' },
-        { language: 'Java', completeCode: '' },
-        { language: 'JavaScript', completeCode: '' }
-      ]
+ startCode: [
+  { language: 'c++', initialCode: '' },     // was 'C++'
+  { language: 'java', initialCode: '' },    // was 'Java'
+  { language: 'javascript', initialCode: '' } // was 'JavaScript'
+],
+referenceSolution: [
+  { language: 'c++', completeCode: '' },
+  { language: 'java', completeCode: '' },
+  { language: 'javascript', completeCode: '' }
+]
     }
   });
 

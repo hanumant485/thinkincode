@@ -248,7 +248,7 @@ const ProblemPage = () => {
                       className={`btn btn-sm ${selectedLanguage === lang ? 'btn-primary' : 'btn-ghost'}`}
                       onClick={() => handleLanguageChange(lang)}
                     >
-                      {lang === 'cpp' ? 'C++' : lang === 'javascript' ? 'JavaScript' : 'Java'}
+                      {lang === 'c++' ? 'C++' : lang === 'javascript' ? 'JavaScript' : 'Java'}
                     </button>
                   ))}
                 </div>
