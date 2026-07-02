@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, NavLink } from 'react-router';
-import axiosClient from '../utils/axiosClient';
+import { registerUser } from '../authSlice';
 
-// Strong password: at least 8 chars, one uppercase, one lowercase, one number, one special character
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 const signupSchema = z.object({
@@ -18,9 +18,9 @@ const signupSchema = z.object({
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
 
   const {
     register,
@@ -28,20 +28,14 @@ function Signup() {
     formState: { errors },
   } = useForm({ resolver: zodResolver(signupSchema) });
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // ✅ Use the correct backend endpoint: /user/register
-      await axiosClient.post('/user/register', data);
-      // Redirect to login page with success message
-      navigate('/login', { state: { message: 'Account created! Please login.' } });
-    } catch (err) {
-      console.error('Signup error:', err);
-      setError(err.response?.data?.message || 'Signup failed. Please try again.');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
     }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = (data) => {
+    dispatch(registerUser(data));
   };
 
   return (
@@ -49,7 +43,6 @@ function Signup() {
       <div className="card w-96 bg-base-100 shadow-xl">
         <div className="card-body">
           <h2 className="card-title justify-center text-3xl mb-6">ThinkINCode</h2>
-
           {error && (
             <div className="alert alert-error shadow-lg mb-4">
               <div>
@@ -60,7 +53,6 @@ function Signup() {
               </div>
             </div>
           )}
-
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="form-control">
               <label className="label">

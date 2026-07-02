@@ -13,18 +13,40 @@ const register = async (req, res) => {
     const { firstName, emailId, password } = req.body;
     req.body.password = await bcrypt.hash(password, 10);
     req.body.role = 'user';
+
     const user = await User.create(req.body);
+
+    const token = jwt.sign(
+      { id: user._id, emailId: user.emailId, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: 60 * 60 }
+    );
+
+    const reply = {
+      firstName: user.firstName,
+      emailId: user.emailId,
+      _id: user._id,
+      role: user.role,
+    };
+
+    res.cookie('token', token, {
+      maxAge: 60 * 60 * 1000,
+      httpOnly: false,
+      secure: false,
+      sameSite: 'Lax',
+      path: '/'
+    });
+
     res.status(201).json({
-      user: {
-        firstName: user.firstName,
-        emailId: user.emailId,
-        _id: user._id,
-        role: user.role,
-      },
-      message: "Registration successful. Please login."
+      user: reply,
+      message: "Registration successful"
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("Registration Error:", err.message);
+    res.status(400).json({
+      message: err.message || "Registration failed",
+      error: err.message
+    });
   }
 };
 

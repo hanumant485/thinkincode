@@ -7,10 +7,28 @@ import SubmissionHistory from "../components/SubmissionHistory"
 import ChatAi from '../components/ChatAi';
 import Editorial from '../components/Editorial';
 
-const langMap = {
-  cpp: 'C++',
+// Map frontend language keys to display names
+const languageDisplay = {
+  javascript: 'JavaScript',
   java: 'Java',
-  javascript: 'JavaScript'
+  cpp: 'C++'
+};
+
+// Map frontend keys to the exact strings stored in the database (lowercase)
+const storedLanguageMap = {
+  javascript: 'javascript',
+  java: 'java',
+  cpp: 'c++'
+};
+
+// Helper to get display name from any stored language string
+const getDisplayLanguage = (lang) => {
+  if (!lang) return lang;
+  const lower = lang.toLowerCase();
+  if (lower === 'c++') return 'C++';
+  if (lower === 'java') return 'Java';
+  if (lower === 'javascript') return 'JavaScript';
+  return lang; // fallback
 };
 
 const ProblemPage = () => {
@@ -32,9 +50,14 @@ const ProblemPage = () => {
       setLoading(true);
       try {
         const response = await axiosClient.get(`/problem/problemById/${problemId}`);
-        const initialCode = response.data.startCode.find(sc => sc.language === langMap[selectedLanguage]).initialCode;
         setProblem(response.data);
-        setCode(initialCode);
+        // Set initial code for the default language (javascript)
+        const storedLang = storedLanguageMap[selectedLanguage];
+        // ✅ Case-insensitive match
+        const starter = response.data.startCode?.find(
+          sc => sc.language.toLowerCase() === storedLang
+        );
+        setCode(starter ? starter.initialCode : '// No starter code for this language');
         setLoading(false);
       } catch (error) {
         console.error('Error fetching problem:', error);
@@ -44,10 +67,15 @@ const ProblemPage = () => {
     fetchProblem();
   }, [problemId]);
 
+  // When language changes, update the code editor with the new starter code
   useEffect(() => {
     if (problem) {
-      const initialCode = problem.startCode.find(sc => sc.language === langMap[selectedLanguage]).initialCode;
-      setCode(initialCode);
+      const storedLang = storedLanguageMap[selectedLanguage];
+      // ✅ Case-insensitive match
+      const starter = problem.startCode?.find(
+        sc => sc.language.toLowerCase() === storedLang
+      );
+      setCode(starter ? starter.initialCode : '// No starter code for this language');
     }
   }, [selectedLanguage, problem]);
 
@@ -77,7 +105,7 @@ const ProblemPage = () => {
     } catch (error) {
       console.error('Error running code:', error);
       if (error.response && error.response.data) {
-        setRunResult(error.response.data); // { error, details }
+        setRunResult(error.response.data);
       } else {
         setRunResult({ error: 'Internal server error', details: error.message });
       }
@@ -99,7 +127,6 @@ const ProblemPage = () => {
       setActiveRightTab('result');
     } catch (error) {
       console.error('Error submitting code:', error);
-      // ✅ Capture backend error response
       if (error.response && error.response.data) {
         setSubmitResult(error.response.data);
       } else {
@@ -138,7 +165,7 @@ const ProblemPage = () => {
 
   return (
     <div className="h-screen flex bg-base-100">
-      {/* Left Panel - unchanged, keep as is */}
+      {/* Left Panel */}
       <div className="w-1/2 flex flex-col border-r border-base-300">
         <div className="tabs tabs-bordered bg-base-200 px-4">
           <button className={`tab ${activeLeftTab === 'description' ? 'tab-active' : ''}`} onClick={() => setActiveLeftTab('description')}>Description</button>
@@ -196,11 +223,11 @@ const ProblemPage = () => {
                     {problem.referenceSolution?.map((solution, index) => (
                       <div key={index} className="border border-base-300 rounded-lg">
                         <div className="bg-base-200 px-4 py-2 rounded-t-lg">
-                          <h3 className="font-semibold">{problem?.title} - {solution?.language}</h3>
+                          <h3 className="font-semibold">{problem.title} - {getDisplayLanguage(solution.language)}</h3>
                         </div>
                         <div className="p-4">
                           <pre className="bg-base-300 p-4 rounded text-sm overflow-x-auto">
-                            <code>{solution?.completeCode}</code>
+                            <code>{solution.completeCode}</code>
                           </pre>
                         </div>
                       </div>
@@ -248,7 +275,7 @@ const ProblemPage = () => {
                       className={`btn btn-sm ${selectedLanguage === lang ? 'btn-primary' : 'btn-ghost'}`}
                       onClick={() => handleLanguageChange(lang)}
                     >
-                      {lang === 'c++' ? 'C++' : lang === 'javascript' ? 'JavaScript' : 'Java'}
+                      {languageDisplay[lang]}
                     </button>
                   ))}
                 </div>
